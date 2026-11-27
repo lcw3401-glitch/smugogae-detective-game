@@ -1,0 +1,1212 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>스무고개 탐정과 마술사 - 비밀의 마술 무대 추리 미션</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Jua&family=Noto+Sans+KR:wght@400;500;700;900&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-navy: #0f172a;
+      --card-cream: #fdfbf7;
+      --gold: #f59e0b;
+      --crimson: #be123c;
+    }
+
+    body {
+      font-family: 'Noto Sans KR', sans-serif;
+      background-color: var(--bg-navy);
+      background-image:
+        radial-gradient(circle at 15% 20%, rgba(190, 18, 60, 0.18) 0%, transparent 40%),
+        radial-gradient(circle at 85% 80%, rgba(245, 158, 11, 0.15) 0%, transparent 45%),
+        linear-gradient(180deg, #0b1120 0%, #1e1b4b 100%);
+      color: #f8fafc;
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    .font-title {
+      font-family: 'Jua', sans-serif;
+    }
+
+    .parchment {
+      background-color: #fdfbf7;
+      background-image: radial-gradient(#e7e0d2 0.75px, transparent 0.75px);
+      background-size: 16px 16px;
+      color: #1e293b;
+      box-shadow: 0 20px 45px -15px rgba(0, 0, 0, 0.65), inset 0 0 0 2px #e5dcc5;
+    }
+
+    .btn-detective {
+      transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+      box-shadow: 0 4px 0 rgba(0, 0, 0, 0.25);
+    }
+    .btn-detective:hover:not(:disabled) {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 0 rgba(0, 0, 0, 0.3);
+    }
+    .btn-detective:active:not(:disabled) {
+      transform: translateY(2px);
+      box-shadow: 0 2px 0 rgba(0, 0, 0, 0.25);
+    }
+
+    @keyframes floatSlow {
+      0%, 100% { transform: translateY(0px) rotate(0deg); }
+      50% { transform: translateY(-6px) rotate(1.5deg); }
+    }
+    .animate-float {
+      animation: floatSlow 3.5s ease-in-out infinite;
+    }
+
+    @keyframes fadeSlideUp {
+      from { opacity: 0; transform: translateY(16px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .stage-enter {
+      animation: fadeSlideUp 0.45s ease-out forwards;
+    }
+
+    @keyframes shake {
+      0%, 100% { transform: translateX(0); }
+      25% { transform: translateX(-6px); }
+      50% { transform: translateX(6px); }
+      75% { transform: translateX(-4px); }
+    }
+    .animate-shake {
+      animation: shake 0.35s ease-in-out;
+    }
+
+    /* Custom Scrollbar */
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: rgba(15, 23, 42, 0.4); }
+    ::-webkit-scrollbar-thumb { background: #64748b; border-radius: 9999px; }
+  </style>
+</head>
+<body class="flex flex-col justify-between selection:bg-amber-300 selection:text-slate-900">
+
+  <!-- Top Navigation / Status HUD -->
+  <header id="game-hud" class="hidden sticky top-0 z-30 bg-slate-950/90 backdrop-blur-md border-b border-amber-500/30 px-4 py-2.5 shadow-lg">
+    <div class="max-w-3xl mx-auto flex flex-wrap items-center justify-between gap-2">
+      <!-- Detective Name & Stage -->
+      <div class="flex items-center gap-2.5">
+        <span class="inline-flex items-center justify-center w-9 h-9 rounded-full bg-amber-500/20 border border-amber-400 text-lg">🕵️</span>
+        <div>
+          <p class="text-xs text-amber-300 font-bold leading-tight" id="hud-student-name">견습 탐정</p>
+          <p class="text-sm font-title text-white tracking-wide" id="hud-stage-label">STAGE 1 / 4</p>
+        </div>
+      </div>
+
+      <!-- Hearts, Timer & Clue Notebook Button -->
+      <div class="flex items-center gap-2 sm:gap-3">
+        <!-- Reasoning Stamina (Hearts) -->
+        <div class="flex items-center bg-slate-900 px-2.5 py-1.5 rounded-xl border border-slate-700" title="추리력 생명">
+          <span id="hud-hearts" class="text-sm sm:text-base tracking-widest">❤️❤️❤️❤️❤️</span>
+        </div>
+
+        <!-- Clue Notebook Button -->
+        <button onclick="toggleNotebook(true)" class="btn-detective relative flex items-center gap-1.5 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs sm:text-sm px-3 py-2 rounded-xl">
+          <span>📒 단서 수첩</span>
+          <span id="clue-badge" class="inline-flex items-center justify-center bg-rose-600 text-white text-xs font-black w-5 h-5 rounded-full">0</span>
+        </button>
+
+        <!-- Sound Toggle -->
+        <button onclick="toggleSound()" id="sound-btn" class="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-600 text-sm" title="효과음 켜기/끄기">
+          🔊
+        </button>
+      </div>
+    </div>
+
+    <!-- Progress Bar -->
+    <div class="max-w-3xl mx-auto mt-2">
+      <div class="w-full h-1.5 bg-slate-800 rounded-full overflow-hidden">
+        <div id="hud-progress" class="h-full bg-gradient-to-r from-amber-400 via-yellow-300 to-rose-500 transition-all duration-500" style="width: 10%;"></div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Content Container -->
+  <main class="flex-grow flex items-center justify-center p-4 sm:p-6">
+    <div id="app-container" class="w-full max-w-3xl">
+      <!-- Dynamic Screens Rendered Here -->
+    </div>
+  </main>
+
+  <!-- Clue Notebook Modal -->
+  <div id="notebook-modal" class="hidden fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="parchment w-full max-w-lg rounded-3xl p-5 sm:p-6 relative max-h-[85vh] flex flex-col border-4 border-amber-600">
+      <div class="flex items-center justify-between border-b-2 border-amber-200 pb-3 mb-4">
+        <div class="flex items-center gap-2">
+          <span class="text-2xl">📒</span>
+          <h2 class="font-title text-2xl text-slate-900">스무고개 탐정의 단서 수첩</h2>
+        </div>
+        <button onclick="toggleNotebook(false)" class="w-9 h-9 rounded-full bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold flex items-center justify-center">✕</button>
+      </div>
+
+      <div id="notebook-list" class="overflow-y-auto space-y-3 pr-1 flex-grow">
+        <!-- Clues will be populated here -->
+      </div>
+
+      <div class="mt-4 pt-3 border-t border-amber-200 flex justify-between items-center text-xs text-slate-500">
+        <span>사건을 해결하며 모은 핵심 단서들입니다.</span>
+        <button onclick="toggleNotebook(false)" class="bg-slate-800 text-white px-4 py-2 rounded-xl font-bold hover:bg-slate-700">닫기</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast / Message Banner -->
+  <div id="toast-box" class="fixed bottom-5 left-1/2 -translate-x-1/2 z-50 pointer-events-none transition-all duration-300 opacity-0 translate-y-4">
+    <div id="toast-content" class="bg-slate-900/95 text-white border-2 border-amber-400 px-5 py-3 rounded-2xl shadow-2xl text-sm sm:text-base font-bold flex items-center gap-2.5">
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <footer class="text-center text-xs text-slate-400 py-4 px-4">
+    <p>원작: 허교범 『스무고개 탐정과 마술사』 (비룡소) 기반 독서 추리 체험 게임</p>
+  </footer>
+
+  <script>
+    // ==========================================
+    // 1. Web Audio API Sound Effects (No external files needed)
+    // ==========================================
+    let soundEnabled = true;
+    let audioCtx = null;
+
+    function initAudio() {
+      if (!audioCtx) {
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      }
+      if (audioCtx.state === 'suspended') {
+        audioCtx.resume();
+      }
+    }
+
+    function playTone(freq, type = 'sine', duration = 0.15, delay = 0, gainVal = 0.12) {
+      if (!soundEnabled) return;
+      try {
+        initAudio();
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = type;
+        osc.frequency.setValueAtTime(freq, audioCtx.currentTime + delay);
+        gain.gain.setValueAtTime(gainVal, audioCtx.currentTime + delay);
+        gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + delay + duration);
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start(audioCtx.currentTime + delay);
+        osc.stop(audioCtx.currentTime + delay + duration);
+      } catch (e) {
+        // Ignore audio errors on restricted browsers
+      }
+    }
+
+    const sfx = {
+      click: () => playTone(520, 'triangle', 0.08, 0, 0.08),
+      correct: () => {
+        playTone(523.25, 'sine', 0.12, 0, 0.12);
+        playTone(659.25, 'sine', 0.12, 0.1, 0.12);
+        playTone(783.99, 'sine', 0.22, 0.2, 0.14);
+      },
+      wrong: () => {
+        playTone(220, 'sawtooth', 0.15, 0, 0.1);
+        playTone(185, 'sawtooth', 0.22, 0.14, 0.1);
+      },
+      clue: () => {
+        playTone(880, 'sine', 0.1, 0, 0.1);
+        playTone(1174.66, 'sine', 0.25, 0.09, 0.12);
+      },
+      fanfare: () => {
+        const notes = [523.25, 659.25, 783.99, 1046.50, 783.99, 1046.50];
+        const times = [0, 0.12, 0.24, 0.36, 0.54, 0.68];
+        notes.forEach((n, i) => playTone(n, 'triangle', 0.25, times[i], 0.15));
+      }
+    };
+
+    function toggleSound() {
+      soundEnabled = !soundEnabled;
+      document.getElementById('sound-btn').textContent = soundEnabled ? '🔊' : '🔇';
+      if (soundEnabled) sfx.click();
+    }
+
+    // ==========================================
+    // 2. Game State & Book Data
+    // ==========================================
+    const state = {
+      studentName: '',
+      schoolClass: '',
+      currentStage: 0, // 0: Intro, 1: Team & Case, 2: Twenty Questions, 3: Stage Trick, 4: Final Culprit, 5: Ending
+      hearts: 5,
+      maxHearts: 5,
+      clues: [],
+      startTime: null,
+      endTime: null,
+      // Stage 1 sub-progress
+      s1Index: 0,
+      // Stage 2 Twenty Questions state
+      s2QuestionsAsked: [],
+      s2MaxQuestions: 6,
+      s2GuessMode: false,
+      // Stage 3 Magic Trick state
+      s3Step: 0,
+      // Stage 4 Final Deduction state
+      s4SelectedClueIds: [],
+      s4Culprit: null
+    };
+
+    // Stage 1: Understanding the Detective Team & Mystery Setup
+    const stage1Quizzes = [
+      {
+        character: "🕵️ 스무고개 탐정",
+        tag: "탐정 사무소 기초 점검 1/3",
+        question: "우리의 주인공 '스무고개 탐정'이 사건의 진실을 파헤칠 때 사용하는 가장 특별한 추리 방법은 무엇일까요?",
+        options: [
+          { text: "상대방에게 '예' 또는 '아니오'로 대답할 수 있는 질문을 던져 범위를 좁혀 나간다.", correct: true },
+          { text: "최면술을 걸어서 용의자가 모든 비밀을 스스로 털어놓게 만든다.", correct: false },
+          { text: "탐정 수첩에 적힌 미래 예언을 보고 범인을 미리 찾아낸다.", correct: false }
+        ],
+        explanation: "정답입니다! 스무고개 탐정은 핵심을 찌르는 '예/아니오' 질문을 통해 거짓말의 틈을 찾아내고 진실에 다가갑니다.",
+        clue: {
+          id: "clue1",
+          title: "단서 ① 스무고개의 원칙",
+          icon: "❓",
+          desc: "스무고개 질문은 '예/아니오'로만 답할 수 있어야 하며, 질문 하나마다 거짓말쟁이의 선택지를 줄여 나간다."
+        }
+      },
+      {
+        character: "👧 다주 & 👦 문양 & 🧑 명규",
+        tag: "탐정 사무소 기초 점검 2/3",
+        question: "『스무고개 탐정과 마술사』에서 탐정 사무소 친구들의 역할로 바르게 짝지어진 것은 무엇일까요?",
+        options: [
+          { text: "다주는 의뢰인과 소통하며 사건을 기록하고, 문양은 발 빠르게 정보를 모으며, 명규는 든든하게 탐정을 돕는다.", correct: true },
+          { text: "다주는 마술사 조수이고, 문양은 학교 교장 선생님이며, 명규는 경찰서장이다.", correct: false },
+          { text: "세 친구 모두 마술 대회 우승자 출신으로 공중 부양 마술을 부릴 수 있다.", correct: false }
+        ],
+        explanation: "맞아요! 다주(기록과 조수), 문양(정보 수집통), 명규(듬직한 지원군)가 힘을 합쳐 스무고개 탐정의 추리를 돕습니다.",
+        clue: {
+          id: "clue2",
+          title: "단서 ② 탐정단의 팀워크",
+          icon: "🤝",
+          desc: "문양이 알아낸 소문에 따르면, 새로 나타난 마술사는 완벽해 보이는 트릭 뒤에 진짜 목적을 숨기고 있다."
+        }
+      },
+      {
+        character: "🎩 의문의 마술사",
+        tag: "탐정 사무소 기초 점검 3/3",
+        question: "어느 날 나타난 신비로운 '마술사'는 스무고개 탐정에게 어떤 태도를 보였나요?",
+        options: [
+          { text: "마술은 사람들의 시선을 속이는 기술이라며, 탐정에게 일종의 도전장처럼 수수께끼를 던졌다.", correct: true },
+          { text: "자신은 진짜 마법사라고 우기며 탐정 사무소를 폐쇄하라고 협박했다.", correct: false },
+          { text: "겁이 너무 많아서 사람들 앞에 한 번도 나서지 않고 숨어만 지냈다.", correct: false }
+        ],
+        explanation: "훌륭해요! 마술사는 화려한 손기술과 '미스디렉션(시선 돌리기)'으로 사람들의 눈을 속이며 탐정과 두뇌 대결을 벌입니다.",
+        clue: {
+          id: "clue3",
+          title: "단서 ③ 마술의 기본 원리",
+          icon: "🎩",
+          desc: "마술사는 관객이 '보고 싶은 것'을 보여 주면서, 정작 중요한 행동은 다른 곳에서 몰래 처리한다(시선 돌리기)."
+        }
+      }
+    ];
+
+    // Stage 2: Interactive Twenty Questions Minigame
+    // Secret Target: "가짜 밑바닥이 있는 마술 상자 (이중 상자)"
+    const twentyQuestionsPool = [
+      {
+        id: "q1",
+        q: "그 물건은 살아 움직이는 동물인가요?",
+        a: "아니오! (무생물입니다.)",
+        hint: "비둘기나 토끼 같은 동물은 아니군요."
+      },
+      {
+        id: "q2",
+        q: "사람이 두 손으로 들 수 있을 만큼 작거나 가벼운가요?",
+        a: "예! (무대 위 탁자에 올려놓을 수 있는 크기입니다.)",
+        hint: "거대한 무대 장치가 아니라 손으로 다룰 수 있는 소품입니다."
+      },
+      {
+        id: "q3",
+        q: "종이나 카드로만 만들어진 얇은 물건인가요?",
+        a: "아니오! (단단한 나무나 플라스틱 재질로 되어 있습니다.)",
+        hint: "트럼프 카드나 지폐는 제외할 수 있겠네요."
+      },
+      {
+        id: "q4",
+        q: "그 물건 안쪽에 다른 물건을 넣거나 숨길 수 있는 공간이 있나요?",
+        a: "예! (무언가를 넣고 뚜껑을 닫을 수 있습니다.)",
+        hint: "안에 물건을 넣었다가 사라지게 만드는 도구입니다!"
+      },
+      {
+        id: "q5",
+        q: "겉으로 보이는 것과 달리 숨겨진 비밀 장치(이중 구조)가 있나요?",
+        a: "예! (겉보기엔 텅 비어 보이지만 비밀 칸이 있습니다.)",
+        hint: "결정적인 힌트예요! 평범한 상자나 모자가 아닙니다."
+      },
+      {
+        id: "q6",
+        q: "머리에 쓰는 모자 형태의 도구인가요?",
+        a: "아니오! (네모난 모양의 도구입니다.)",
+        hint: "마술사 모자가 아니라 네모난 상자 형태입니다."
+      },
+      {
+        id: "q7",
+        q: "날카로운 칼이나 가위처럼 자르는 도구인가요?",
+        a: "아니오! (자르는 도구가 아닙니다.)",
+        hint: "위험한 도구는 아닙니다."
+      }
+    ];
+
+    const twentyQuestionGuesses = [
+      { id: "g1", name: "토끼가 들어 있는 마술 모자", correct: false, reason: "질문 단서를 다시 확인해 보세요! 머리에 쓰는 모자 형태가 아니라고 했어요." },
+      { id: "g2", name: "비밀 칸이 숨겨진 이중 마술 상자", correct: true, reason: "정답입니다! 겉으로는 비어 보이지만 가짜 밑바닥(비밀 칸)에 물건을 숨길 수 있는 이중 마술 상자였습니다!" },
+      { id: "g3", name: "숫자가 바뀌는 트럼프 카드 한 벌", correct: false, reason: "종이나 카드로만 만들어진 얇은 물건이 아니라고 답했죠!" },
+      { id: "g4", name: "사람이 들어가는 거대한 쇠사슬 수조", correct: false, reason: "두 손으로 들 수 있을 만큼 탁자 위에 올리는 크기의 소품이에요!" }
+    ];
+
+    // Stage 3: Magic Stage Trick & Contradiction Puzzle
+    const stage3Steps = [
+      {
+        title: "무대 위의 모순을 찾아라! (1단계: 시간의 트릭)",
+        story: `마술 공연이 끝난 직후, 대기실에 보관해 둔 '황금 회중시계'가 사라졌습니다. 용의자로 지목된 마술사는 이렇게 주장했습니다.<br><br>
+        <span class="block bg-amber-100/80 border-l-4 border-amber-600 p-3 rounded-r-xl text-slate-800 font-medium">
+        "저는 오후 4시 00분부터 4시 15분까지 무대 커튼 뒤에서 계속 그림자 마술을 보여 주고 있었습니다. 관객 모두가 제 그림자를 봤으니 대기실에 갈 시간이 없었죠!"
+        </span><br>
+        하지만 스무고개 탐정은 무대 옆 탁자에서 <strong>녹음기와 자동 조명 타이머</strong>를 발견했습니다. 마술사의 알리바이는 어떻게 깨질까요?`,
+        options: [
+          {
+            text: "마술사는 미리 녹음한 목소리와 자동 조명으로 그림자만 비추게 해 두고, 그사이에 대기실에 다녀왔다!",
+            correct: true
+          },
+          {
+            text: "마술사가 순간이동 마법을 진짜로 사용해서 1초 만에 대기실에 다녀왔다!",
+            correct: false
+          },
+          {
+            text: "관객들이 단체로 낮잠을 자느라 15분 동안 아무도 무대를 보지 못했다!",
+            correct: false
+          }
+        ],
+        explanation: "정확합니다! 관객들은 '그림자'를 마술사 본인이라고 착각했지만, 실제로는 미리 준비된 장치로 시선을 묶어 둔 것이었죠!",
+        clue: {
+          id: "clue5",
+          title: "단서 ⑤ 그림자 알리바이의 비밀",
+          icon: "🕯️",
+          desc: "마술사는 조명과 녹음 장치로 무대 위에 자신이 있는 것처럼 꾸미고, 15분 동안 대기실에 다녀올 시간을 벌었다."
+        }
+      },
+      {
+        title: "무대 위의 모순을 찾아라! (2단계: 사라진 물건의 행방)",
+        story: `대기실에 다녀온 마술사의 주머니와 가방을 모두 수색했지만, 사라진 회중시계는 나오지 않았습니다.<br>
+        그때 다주가 무대 소품 수레에 놓인 <strong>이중 마술 상자</strong>를 가리켰고, 문양은 마술사가 공연 마지막에 <em>"이 상자 안의 물건을 영원히 사라지게 하겠습니다!"</em>라고 외쳤던 장면을 떠올렸습니다.<br><br>
+        마술사가 수색을 피하기 위해 선택한 가장 영리한 숨김 전략은 무엇이었을까요?`,
+        options: [
+          {
+            text: "모두가 '비어 있다'고 믿게 만든 이중 마술 상자의 비밀 칸에 시계를 숨겨 두었다!",
+            correct: true
+          },
+          {
+            text: "회중시계를 망치로 부숴서 가루로 만든 뒤 바람에 날려 버렸다!",
+            correct: false
+          },
+          {
+            text: "탐정 사무소 문양의 가방 속에 몰래 넣어 누명을 씌웠다!",
+            correct: false
+          }
+        ],
+        explanation: "완벽한 추리입니다! '등잔 밑이 어둡다'는 말처럼, 공연 중에 이미 비어 있다고 확인시켜 준 마술 상자 속이야말로 아무도 의심하지 않는 완벽한 은신처였습니다!",
+        clue: {
+          id: "clue6",
+          title: "단서 ⑥ 완벽한 은신처",
+          icon: "📦",
+          desc: "마술사는 공연 중 '빈 상자'임을 보여 주며 관객의 의심을 지운 뒤, 이중 바닥 아래에 진짜 목표물을 숨겼다."
+        }
+      }
+    ];
+
+    // ==========================================
+    // 3. Helper UI Functions
+    // ==========================================
+    function showToast(msg, duration = 2600) {
+      const box = document.getElementById('toast-box');
+      const content = document.getElementById('toast-content');
+      content.innerHTML = msg;
+      box.classList.remove('opacity-0', 'translate-y-4');
+      box.classList.add('opacity-100', 'translate-y-0');
+      clearTimeout(window._toastTimer);
+      window._toastTimer = setTimeout(() => {
+        box.classList.add('opacity-0', 'translate-y-4');
+        box.classList.remove('opacity-100', 'translate-y-0');
+      }, duration);
+    }
+
+    function addClue(clueObj) {
+      if (!state.clues.some(c => c.id === clueObj.id)) {
+        state.clues.push(clueObj);
+        sfx.clue();
+        updateHUD();
+        showToast(`📒 새 단서 획득! <span class="text-amber-300">[${clueObj.title}]</span>`);
+      }
+    }
+
+    function loseHeart() {
+      sfx.wrong();
+      if (state.hearts > 1) {
+        state.hearts--;
+        updateHUD();
+      }
+      const card = document.querySelector('.parchment');
+      if (card) {
+        card.classList.remove('animate-shake');
+        void card.offsetWidth;
+        card.classList.add('animate-shake');
+      }
+    }
+
+    function updateHUD() {
+      const hud = document.getElementById('game-hud');
+      if (state.currentStage === 0 || state.currentStage === 5) {
+        hud.classList.add('hidden');
+        return;
+      }
+      hud.classList.remove('hidden');
+
+      const displayName = state.schoolClass
+        ? `${state.schoolClass} ${state.studentName} 탐정`
+        : `${state.studentName} 탐정`;
+      document.getElementById('hud-student-name').textContent = displayName;
+
+      const stageNames = {
+        1: "STAGE 1/4 · 탐정 사무소 점검",
+        2: "STAGE 2/4 · 스무고개 추리 대결",
+        3: "STAGE 3/4 · 마술 무대 트릭 해독",
+        4: "STAGE 4/4 · 최종 진실 지목"
+      };
+      document.getElementById('hud-stage-label').textContent = stageNames[state.currentStage] || "";
+
+      const fullHearts = "❤️".repeat(state.hearts);
+      const emptyHearts = "🖤".repeat(state.maxHearts - state.hearts);
+      document.getElementById('hud-hearts').textContent = fullHearts + emptyHearts;
+
+      document.getElementById('clue-badge').textContent = state.clues.length;
+
+      const progressMap = { 1: 22, 2: 50, 3: 75, 4: 92 };
+      document.getElementById('hud-progress').style.width = (progressMap[state.currentStage] || 100) + "%";
+    }
+
+    function toggleNotebook(open) {
+      sfx.click();
+      const modal = document.getElementById('notebook-modal');
+      if (open) {
+        renderNotebook();
+        modal.classList.remove('hidden');
+      } else {
+        modal.classList.add('hidden');
+      }
+    }
+
+    function renderNotebook() {
+      const list = document.getElementById('notebook-list');
+      if (state.clues.length === 0) {
+        list.innerHTML = `
+          <div class="text-center py-10 text-slate-400">
+            <p class="text-4xl mb-2">🔍</p>
+            <p class="font-bold">아직 수집한 단서가 없습니다.</p>
+            <p class="text-xs mt-1">미션을 해결하면 자동으로 수첩에 기록됩니다!</p>
+          </div>`;
+        return;
+      }
+      list.innerHTML = state.clues.map(c => `
+        <div class="bg-white border-2 border-amber-300/80 rounded-2xl p-3.5 shadow-sm">
+          <div class="flex items-center gap-2 mb-1">
+            <span class="text-xl">${c.icon}</span>
+            <h3 class="font-bold text-slate-900 text-sm sm:text-base">${c.title}</h3>
+          </div>
+          <p class="text-xs sm:text-sm text-slate-600 leading-relaxed">${c.desc}</p>
+        </div>
+      `).join('');
+    }
+
+    // ==========================================
+    // 4. Screen Renderers
+    // ==========================================
+    function render() {
+      updateHUD();
+      const container = document.getElementById('app-container');
+      switch (state.currentStage) {
+        case 0: renderIntro(container); break;
+        case 1: renderStage1(container); break;
+        case 2: renderStage2(container); break;
+        case 3: renderStage3(container); break;
+        case 4: renderStage4(container); break;
+        case 5: renderEnding(container); break;
+      }
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    // --- STAGE 0: INTRO SCREEN ---
+    function renderIntro(container) {
+      container.innerHTML = `
+        <div class="stage-enter parchment rounded-3xl p-6 sm:p-10 border-4 border-amber-500/80 relative overflow-hidden">
+          <!-- Decorative Corner Badge -->
+          <div class="flex justify-center mb-4">
+            <span class="inline-flex items-center gap-1.5 bg-rose-700 text-amber-200 text-xs sm:text-sm font-bold px-4 py-1.5 rounded-full shadow">
+              🎩 허교범 추리 동화 북게임 · 제2권 미션
+            </span>
+          </div>
+
+          <div class="text-center mb-6">
+            <div class="text-5xl sm:text-6xl mb-3 animate-float inline-block">🕵️‍♂️✨🎩</div>
+            <h1 class="font-title text-3xl sm:text-5xl text-slate-900 leading-tight mb-2">
+              스무고개 탐정과 마술사
+            </h1>
+            <p class="font-title text-lg sm:text-2xl text-rose-700">
+              - 사라진 황금 회중시계와 무대 트릭의 비밀 -
+            </p>
+          </div>
+
+          <!-- Story Hook Box -->
+          <div class="bg-amber-50 border-2 border-amber-300 rounded-2xl p-4 sm:p-5 mb-6 text-slate-700 text-sm sm:text-base leading-relaxed">
+            <p class="mb-2">
+              <strong class="text-slate-900">"눈에 보이는 것이 전부가 아니야. 진짜 비밀은 시선이 닿지 않는 곳에 숨어 있지!"</strong>
+            </p>
+            <p>
+              어느 날 나타난 수수께끼의 <strong>마술사</strong>가 화려한 마술 공연과 함께 탐정 사무소에 도전장을 내밀었습니다.
+              <strong>스무고개 탐정, 다주, 문양, 명규</strong>와 함께 단서를 모으고, 20개의 질문과 추리로 마술사의 트릭을 밝혀내세요!
+            </p>
+          </div>
+
+          <!-- Student Info Input Form -->
+          <form onsubmit="startGame(event)" class="space-y-4 max-w-md mx-auto">
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label class="block text-xs font-bold text-slate-600 mb-1">학년 / 반 (선택)</label>
+                <input type="text" id="input-class" placeholder="예: 4학년 2반"
+                  class="w-full px-4 py-3 rounded-xl border-2 border-slate-300 focus:border-amber-500 focus:outline-none bg-white text-slate-900 font-medium text-sm" />
+              </div>
+              <div>
+                <label class="block text-xs font-bold text-slate-600 mb-1">탐정 이름 (필수) *</label>
+                <input type="text" id="input-name" required maxlength="12" placeholder="이름을 입력하세요"
+                  class="w-full px-4 py-3 rounded-xl border-2 border-slate-300 focus:border-amber-500 focus:outline-none bg-white text-slate-900 font-bold text-sm" />
+              </div>
+            </div>
+
+            <button type="submit"
+              class="btn-detective w-full bg-gradient-to-r from-rose-600 to-rose-700 hover:from-rose-500 hover:to-rose-600 text-white font-title text-xl sm:text-2xl py-4 rounded-2xl shadow-lg flex items-center justify-center gap-2">
+              <span>🔍 탐정 수첩 펼치고 수사 시작!</span>
+            </button>
+          </form>
+
+          <!-- Mission Overview Pills -->
+          <div class="mt-6 pt-5 border-t border-amber-200/80 grid grid-cols-4 gap-2 text-center text-xs text-slate-600 font-bold">
+            <div class="bg-white/80 p-2 rounded-xl border border-amber-200">1단계<br><span class="text-slate-900">탐정단 점검</span></div>
+            <div class="bg-white/80 p-2 rounded-xl border border-amber-200">2단계<br><span class="text-slate-900">스무고개 추리</span></div>
+            <div class="bg-white/80 p-2 rounded-xl border border-amber-200">3단계<br><span class="text-slate-900">무대 트릭 해독</span></div>
+            <div class="bg-white/80 p-2 rounded-xl border border-amber-200">4단계<br><span class="text-slate-900">진실 지목</span></div>
+          </div>
+        </div>
+      `;
+    }
+
+    function startGame(e) {
+      e.preventDefault();
+      const nameVal = document.getElementById('input-name').value.trim();
+      const classVal = document.getElementById('input-class').value.trim();
+      if (!nameVal) return;
+
+      sfx.correct();
+      state.studentName = nameVal;
+      state.schoolClass = classVal;
+      state.startTime = Date.now();
+      state.currentStage = 1;
+      state.s1Index = 0;
+      render();
+    }
+
+    // --- STAGE 1: DETECTIVE TEAM & STORY COMPREHENSION ---
+    function renderStage1(container) {
+      const item = stage1Quizzes[state.s1Index];
+      container.innerHTML = `
+        <div class="stage-enter parchment rounded-3xl p-6 sm:p-8 border-4 border-amber-500/80">
+          <div class="flex items-center justify-between mb-4">
+            <span class="bg-amber-500/20 text-amber-900 border border-amber-400 text-xs font-bold px-3 py-1 rounded-full">
+              ${item.tag}
+            </span>
+            <span class="text-xs font-bold text-slate-500">기초 단서 확보 중...</span>
+          </div>
+
+          <div class="flex items-center gap-3 mb-4 bg-slate-900 text-white p-4 rounded-2xl">
+            <div class="text-3xl sm:text-4xl">${item.character.split(' ')[0]}</div>
+            <div>
+              <p class="text-xs text-amber-400 font-bold">등장인물 브리핑</p>
+              <h2 class="font-title text-xl sm:text-2xl">${item.character}</h2>
+            </div>
+          </div>
+
+          <p class="text-base sm:text-lg font-bold text-slate-800 leading-relaxed mb-5">
+            Q. ${item.question}
+          </p>
+
+          <div class="space-y-3" id="s1-options">
+            ${item.options.map((opt, idx) => `
+              <button onclick="handleStage1Answer(${idx})"
+                class="btn-detective w-full text-left bg-white hover:bg-amber-50 border-2 border-slate-300 hover:border-amber-500 p-4 rounded-2xl text-slate-800 font-medium text-sm sm:text-base flex items-start gap-3">
+                <span class="inline-flex items-center justify-center w-7 h-7 rounded-full bg-slate-800 text-white text-xs font-bold shrink-0 mt-0.5">${idx + 1}</span>
+                <span>${opt.text}</span>
+              </button>
+            `).join('')}
+          </div>
+
+          <div id="s1-feedback" class="hidden mt-5 p-4 rounded-2xl"></div>
+        </div>
+      `;
+    }
+
+    function handleStage1Answer(idx) {
+      const item = stage1Quizzes[state.s1Index];
+      const chosen = item.options[idx];
+      const fb = document.getElementById('s1-feedback');
+
+      if (chosen.correct) {
+        addClue(item.clue);
+        // Disable option buttons
+        document.querySelectorAll('#s1-options button').forEach(b => b.disabled = true);
+
+        fb.className = "mt-5 p-4 rounded-2xl bg-emerald-50 border-2 border-emerald-500 text-emerald-950";
+        fb.innerHTML = `
+          <p class="font-bold text-base mb-1">✅ 훌륭합니다!</p>
+          <p class="text-sm leading-relaxed mb-4">${item.explanation}</p>
+          <button onclick="nextStage1()" class="btn-detective w-full bg-emerald-600 hover:bg-emerald-500 text-white font-title text-lg py-3 rounded-xl">
+            ${state.s1Index < stage1Quizzes.length - 1 ? "다음 브리핑으로 이동 ➔" : "2단계: 스무고개 추리 대결 시작! ➔"}
+          </button>
+        `;
+        fb.classList.remove('hidden');
+      } else {
+        loseHeart();
+        fb.className = "mt-5 p-4 rounded-2xl bg-rose-50 border-2 border-rose-400 text-rose-900";
+        fb.innerHTML = `
+          <p class="font-bold text-sm">❌ 음, 그건 책의 내용과 조금 달라요! 다시 한번 생각해 볼까요?</p>
+        `;
+        fb.classList.remove('hidden');
+      }
+    }
+
+    function nextStage1() {
+      sfx.click();
+      if (state.s1Index < stage1Quizzes.length - 1) {
+        state.s1Index++;
+        render();
+      } else {
+        state.currentStage = 2;
+        render();
+      }
+    }
+
+    // --- STAGE 2: TWENTY QUESTIONS MINIGAME ---
+    function renderStage2(container) {
+      const remainingQ = state.s2MaxQuestions - state.s2QuestionsAsked.length;
+
+      container.innerHTML = `
+        <div class="stage-enter parchment rounded-3xl p-6 sm:p-8 border-4 border-amber-500/80">
+          <div class="flex flex-wrap items-center justify-between gap-2 mb-4">
+            <span class="bg-rose-600 text-white text-xs font-bold px-3 py-1 rounded-full">
+              STAGE 2 · 스무고개 탐정의 핵심 추리
+            </span>
+            <span class="bg-slate-900 text-amber-300 text-xs font-bold px-3 py-1.5 rounded-xl">
+              남은 질문 기회: <strong class="text-base text-white">${remainingQ}</strong> / ${state.s2MaxQuestions}회
+            </span>
+          </div>
+
+          <h2 class="font-title text-2xl sm:text-3xl text-slate-900 mb-2">
+            ❓ 마술사가 숨긴 '비밀 도구'를 맞혀라!
+          </h2>
+          <p class="text-sm sm:text-base text-slate-600 mb-5 leading-relaxed">
+            마술사가 무대 뒤에서 몰래 사용한 <strong>비밀 도구</strong>가 무엇인지 알아내야 합니다.
+            '예/아니오'로 답할 수 있는 질문을 던져 후보를 좁힌 뒤, 정답을 외쳐 보세요!
+          </p>
+
+          <!-- Asked Questions Log -->
+          <div class="bg-slate-900 text-white rounded-2xl p-4 mb-5 border-2 border-slate-700">
+            <div class="flex items-center justify-between mb-2.5">
+              <span class="text-xs font-bold text-amber-400">📋 스무고개 질문 기록장</span>
+              <span class="text-xs text-slate-400">${state.s2QuestionsAsked.length}개 질문 완료</span>
+            </div>
+            ${state.s2QuestionsAsked.length === 0 ? `
+              <p class="text-xs sm:text-sm text-slate-400 py-3 text-center">
+                아래에서 질문을 선택하면 스무고개 탐정이 대신 질문하고 답을 기록합니다!
+              </p>
+            ` : `
+              <div class="space-y-2 max-h-48 overflow-y-auto pr-1">
+                ${state.s2QuestionsAsked.map((item, i) => `
+                  <div class="bg-slate-800/90 rounded-xl p-2.5 text-xs sm:text-sm border border-slate-700">
+                    <p class="text-amber-200 font-bold">Q${i + 1}. ${item.q}</p>
+                    <p class="text-emerald-300 font-bold mt-0.5">↳ A. ${item.a}</p>
+                  </div>
+                `).join('')}
+              </div>
+            `}
+          </div>
+
+          <!-- Toggle between Asking Questions and Guessing -->
+          <div class="flex gap-2 mb-4">
+            <button onclick="setStage2Mode(false)"
+              class="flex-1 py-2.5 rounded-xl font-bold text-sm border-2 transition ${!state.s2GuessMode ? 'bg-slate-900 text-white border-slate-900' : 'bg-white text-slate-700 border-slate-300'}">
+              1️⃣ 질문하기 (${remainingQ}회 남음)
+            </button>
+            <button onclick="setStage2Mode(true)"
+              class="flex-1 py-2.5 rounded-xl font-bold text-sm border-2 transition ${state.s2GuessMode ? 'bg-rose-600 text-white border-rose-600' : 'bg-rose-50 text-rose-700 border-rose-300'}">
+              2️⃣ 정답 외치기!
+            </button>
+          </div>
+
+          ${!state.s2GuessMode ? `
+            <!-- Question Selection List -->
+            <div class="space-y-2">
+              ${remainingQ > 0 ? twentyQuestionsPool.map(qItem => {
+                const alreadyAsked = state.s2QuestionsAsked.some(a => a.id === qItem.id);
+                return `
+                  <button onclick="askTwentyQuestion('${qItem.id}')" ${alreadyAsked ? 'disabled' : ''}
+                    class="w-full text-left p-3.5 rounded-xl border-2 text-xs sm:text-sm font-bold flex items-center justify-between transition
+                    ${alreadyAsked
+                      ? 'bg-slate-100 border-slate-200 text-slate-400 cursor-not-allowed'
+                      : 'btn-detective bg-white hover:bg-amber-50 border-slate-300 hover:border-amber-500 text-slate-800'}">
+                    <span>${qItem.q}</span>
+                    <span class="text-xs px-2 py-1 rounded-lg ${alreadyAsked ? 'bg-slate-200 text-slate-500' : 'bg-amber-100 text-amber-800'}">
+                      ${alreadyAsked ? '질문 완료' : '질문하기'}
+                    </span>
+                  </button>
+                `;
+              }).join('') : `
+                <div class="bg-amber-100 border-2 border-amber-400 rounded-2xl p-4 text-center">
+                  <p class="font-bold text-slate-900 mb-2">질문 기회를 모두 사용했습니다!</p>
+                  <button onclick="setStage2Mode(true)" class="btn-detective bg-rose-600 text-white font-title px-6 py-2.5 rounded-xl">
+                    이제 정답 외치러 가기 ➔
+                  </button>
+                </div>
+              `}
+            </div>
+          ` : `
+            <!-- Final Object Guess List -->
+            <div class="space-y-2.5" id="s2-guess-list">
+              <p class="text-xs font-bold text-rose-700 mb-1">💡 질문 기록장의 '예 / 아니오' 힌트를 모두 만족하는 도구를 고르세요!</p>
+              ${twentyQuestionGuesses.map(g => `
+                <button onclick="submitTwentyGuess('${g.id}')"
+                  class="btn-detective w-full text-left bg-white hover:bg-rose-50 border-2 border-slate-300 hover:border-rose-500 p-4 rounded-2xl font-bold text-slate-800 text-sm sm:text-base flex items-center gap-3">
+                  <span class="text-xl">🎯</span>
+                  <span>${g.name}</span>
+                </button>
+              `).join('')}
+            </div>
+          `}
+
+          <div id="s2-feedback" class="hidden mt-5 p-4 rounded-2xl"></div>
+        </div>
+      `;
+    }
+
+    function setStage2Mode(isGuess) {
+      sfx.click();
+      state.s2GuessMode = isGuess;
+      render();
+    }
+
+    function askTwentyQuestion(qId) {
+      const remaining = state.s2MaxQuestions - state.s2QuestionsAsked.length;
+      if (remaining <= 0) return;
+      const found = twentyQuestionsPool.find(q => q.id === qId);
+      if (!found || state.s2QuestionsAsked.some(a => a.id === qId)) return;
+
+      sfx.click();
+      state.s2QuestionsAsked.push(found);
+      if (state.s2QuestionsAsked.length === state.s2MaxQuestions) {
+        state.s2GuessMode = true;
+      }
+      render();
+    }
+
+    function submitTwentyGuess(gId) {
+      const guess = twentyQuestionGuesses.find(g => g.id === gId);
+      const fb = document.getElementById('s2-feedback');
+
+      if (guess.correct) {
+        addClue({
+          id: "clue4",
+          title: "단서 ④ 이중 마술 상자의 존재",
+          icon: "🎁",
+          desc: "스무고개 추리 결과, 마술사는 가짜 밑바닥이 달린 '이중 마술 상자'를 이용해 물건을 감추고 있었다."
+        });
+
+        document.querySelectorAll('#s2-guess-list button').forEach(b => b.disabled = true);
+        fb.className = "mt-5 p-4 rounded-2xl bg-emerald-50 border-2 border-emerald-500 text-emerald-950";
+        fb.innerHTML = `
+          <p class="font-bold text-base mb-1">🎉 스무고개 추리 성공!</p>
+          <p class="text-sm leading-relaxed mb-4">${guess.reason}</p>
+          <button onclick="goToStage3()" class="btn-detective w-full bg-emerald-600 hover:bg-emerald-500 text-white font-title text-lg py-3 rounded-xl">
+            3단계: 마술사의 무대 트릭 해독하기 ➔
+          </button>
+        `;
+        fb.classList.remove('hidden');
+      } else {
+        loseHeart();
+        fb.className = "mt-5 p-4 rounded-2xl bg-rose-50 border-2 border-rose-400 text-rose-900";
+        fb.innerHTML = `
+          <p class="font-bold text-sm">❌ 아쉽네요! ${guess.reason}</p>
+        `;
+        fb.classList.remove('hidden');
+      }
+    }
+
+    function goToStage3() {
+      sfx.click();
+      state.currentStage = 3;
+      state.s3Step = 0;
+      render();
+    }
+
+    // --- STAGE 3: MAGIC STAGE TRICK & CONTRADICTION ---
+    function renderStage3(container) {
+      const stepData = stage3Steps[state.s3Step];
+      container.innerHTML = `
+        <div class="stage-enter parchment rounded-3xl p-6 sm:p-8 border-4 border-amber-500/80">
+          <div class="flex items-center justify-between mb-4">
+            <span class="bg-indigo-700 text-white text-xs font-bold px-3 py-1 rounded-full">
+              STAGE 3 · 마술 무대 트릭 해독 (${state.s3Step + 1}/2)
+            </span>
+            <button onclick="toggleNotebook(true)" class="text-xs font-bold text-amber-800 underline">
+              단서 수첩 참고하기 📒
+            </button>
+          </div>
+
+          <h2 class="font-title text-2xl sm:text-3xl text-slate-900 mb-4">
+            🎭 ${stepData.title}
+          </h2>
+
+          <div class="bg-white border-2 border-slate-200 rounded-2xl p-4 sm:p-5 text-sm sm:text-base text-slate-700 leading-relaxed mb-5 shadow-inner">
+            ${stepData.story}
+          </div>
+
+          <div class="space-y-3" id="s3-options">
+            ${stepData.options.map((opt, i) => `
+              <button onclick="handleStage3Answer(${i})"
+                class="btn-detective w-full text-left bg-white hover:bg-indigo-50 border-2 border-slate-300 hover:border-indigo-500 p-4 rounded-2xl text-slate-800 font-medium text-sm sm:text-base flex items-start gap-3">
+                <span class="inline-flex items-center justify-center w-7 h-7 rounded-full bg-indigo-700 text-white text-xs font-bold shrink-0 mt-0.5">${i + 1}</span>
+                <span>${opt.text}</span>
+              </button>
+            `).join('')}
+          </div>
+
+          <div id="s3-feedback" class="hidden mt-5 p-4 rounded-2xl"></div>
+        </div>
+      `;
+    }
+
+    function handleStage3Answer(idx) {
+      const stepData = stage3Steps[state.s3Step];
+      const chosen = stepData.options[idx];
+      const fb = document.getElementById('s3-feedback');
+
+      if (chosen.correct) {
+        addClue(stepData.clue);
+        document.querySelectorAll('#s3-options button').forEach(b => b.disabled = true);
+
+        fb.className = "mt-5 p-4 rounded-2xl bg-emerald-50 border-2 border-emerald-500 text-emerald-950";
+        fb.innerHTML = `
+          <p class="font-bold text-base mb-1">💡 트릭의 비밀을 간파했습니다!</p>
+          <p class="text-sm leading-relaxed mb-4">${stepData.explanation}</p>
+          <button onclick="nextStage3()" class="btn-detective w-full bg-emerald-600 hover:bg-emerald-500 text-white font-title text-lg py-3 rounded-xl">
+            ${state.s3Step < stage3Steps.length - 1 ? "다음 무대 트릭 분석하기 ➔" : "최종 4단계: 범인과 진실 지목하기 ➔"}
+          </button>
+        `;
+        fb.classList.remove('hidden');
+      } else {
+        loseHeart();
+        fb.className = "mt-5 p-4 rounded-2xl bg-rose-50 border-2 border-rose-400 text-rose-900";
+        fb.innerHTML = `
+          <p class="font-bold text-sm">❌ 마술사의 속임수에 넘어갔어요! 마술은 초능력이 아니라 과학적이고 교묘한 트릭입니다. 다시 골라보세요!</p>
+        `;
+        fb.classList.remove('hidden');
+      }
+    }
+
+    function nextStage3() {
+      sfx.click();
+      if (state.s3Step < stage3Steps.length - 1) {
+        state.s3Step++;
+        render();
+      } else {
+        state.currentStage = 4;
+        render();
+      }
+    }
+
+    // --- STAGE 4: FINAL DEDUCTION & CULPRIT REVEAL ---
+    function renderStage4(container) {
+      const suspects = [
+        { id: "magician", name: "🎩 수수께끼의 마술사", role: "시선 돌리기와 이중 마술 상자를 설계한 장본인" },
+        { id: "munyang", name: "👦 정보통 문양", role: "사건의 소문을 가장 먼저 물어온 탐정 사무소 친구" },
+        { id: "daju", name: "👧 조수 다주", role: "탐정 옆에서 사건 기록을 꼼꼼히 적은 친구" }
+      ];
+
+      container.innerHTML = `
+        <div class="stage-enter parchment rounded-3xl p-6 sm:p-8 border-4 border-rose-600">
+          <div class="flex items-center justify-between mb-3">
+            <span class="bg-rose-600 text-white text-xs font-bold px-3 py-1 rounded-full">
+              FINAL STAGE · 스무고개 탐정의 최종 추리
+            </span>
+            <span class="text-xs font-bold text-slate-600">수집된 단서: ${state.clues.length}개</span>
+          </div>
+
+          <h2 class="font-title text-2xl sm:text-3xl text-slate-900 mb-2">
+            ⚖️ "진실은 언제나 하나! 사건의 전말을 밝혀라!"
+          </h2>
+          <p class="text-sm sm:text-base text-slate-600 mb-5">
+            지금까지 모은 단서를 바탕으로 <strong>① 사건을 꾸민 인물</strong>을 지목하고,
+            <strong>② 결정적 증거 단서 2가지</strong>를 선택해 최종 추리를 완성하세요!
+          </p>
+
+          <!-- Step A: Select Suspect -->
+          <div class="mb-6">
+            <h3 class="font-bold text-slate-900 text-sm sm:text-base mb-2.5 flex items-center gap-2">
+              <span class="bg-slate-900 text-white w-6 h-6 rounded-full inline-flex items-center justify-center text-xs">1</span>
+              트릭을 꾸민 인물은 누구인가요?
+            </h3>
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+              ${suspects.map(s => {
+                const selected = state.s4Culprit === s.id;
+                return `
+                  <button onclick="selectFinalCulprit('${s.id}')"
+                    class="p-3.5 rounded-2xl border-2 text-left transition ${selected
+                      ? 'bg-rose-600 text-white border-rose-700 shadow-md'
+                      : 'bg-white hover:bg-amber-50 text-slate-800 border-slate-300'}">
+                    <p class="font-title text-lg mb-1">${s.name}</p>
+                    <p class="text-xs ${selected ? 'text-rose-100' : 'text-slate-500'}">${s.role}</p>
+                  </button>
+                `;
+              }).join('')}
+            </div>
+          </div>
+
+          <!-- Step B: Select 2 Key Clues -->
+          <div class="mb-6">
+            <h3 class="font-bold text-slate-900 text-sm sm:text-base mb-2.5 flex items-center gap-2">
+              <span class="bg-slate-900 text-white w-6 h-6 rounded-full inline-flex items-center justify-center text-xs">2</span>
+              회중시계가 사라진 트릭을 증명할 결정적 단서 2개를 고르세요!
+              <span class="text-xs text-rose-600 font-bold">(${state.s4SelectedClueIds.length}/2 선택)</span>
+            </h3>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+              ${state.clues.map(c => {
+                const isPicked = state.s4SelectedClueIds.includes(c.id);
+                return `
+                  <button onclick="toggleFinalClue('${c.id}')"
+                    class="p-3 rounded-xl border-2 text-left text-xs sm:text-sm transition flex items-start gap-2.5 ${isPicked
+                      ? 'bg-amber-500 text-slate-950 border-amber-700 font-bold shadow'
+                      : 'bg-white hover:bg-slate-50 text-slate-700 border-slate-300'}">
+                    <span class="text-lg">${isPicked ? '☑️' : '⬜'}</span>
+                    <div>
+                      <p class="font-bold">${c.title}</p>
+                      <p class="text-xs opacity-85 line-clamp-2 mt-0.5">${c.desc}</p>
+                    </div>
+                  </button>
+                `;
+              }).join('')}
+            </div>
+          </div>
+
+          <button onclick="verifyFinalDeduction()"
+            class="btn-detective w-full bg-gradient-to-r from-slate-900 to-slate-800 hover:from-rose-700 hover:to-rose-600 text-amber-300 hover:text-white font-title text-xl py-4 rounded-2xl shadow-lg">
+            🔍 최종 추리 발표하기!
+          </button>
+
+          <div id="s4-feedback" class="hidden mt-4 p-4 rounded-2xl"></div>
+        </div>
+      `;
+    }
+
+    function selectFinalCulprit(id) {
+      sfx.click();
+      state.s4Culprit = id;
+      render();
+    }
+
+    function toggleFinalClue(id) {
+      sfx.click();
+      const idx = state.s4SelectedClueIds.indexOf(id);
+      if (idx > -1) {
+        state.s4SelectedClueIds.splice(idx, 1);
+      } else {
+        if (state.s4SelectedClueIds.length >= 2) {
+          state.s4SelectedClueIds.shift();
+        }
+        state.s4SelectedClueIds.push(id);
+      }
+      render();
+    }
+
+    function verifyFinalDeduction() {
+      const fb = document.getElementById('s4-feedback');
+      if (!state.s4Culprit || state.s4SelectedClueIds.length < 2) {
+        sfx.wrong();
+        fb.className = "mt-4 p-3.5 rounded-2xl bg-amber-100 border-2 border-amber-500 text-amber-950 text-sm font-bold";
+        fb.textContent = "⚠️ 인물 1명과 결정적 증거 단서 2개를 모두 선택해 주세요!";
+        fb.classList.remove('hidden');
+        return;
+      }
+
+      // Check culprit is magician & at least one of the specific physical trick clues (clue4, clue5, clue6) is selected
+      const validTrickClues = ["clue4", "clue5", "clue6"];
+      const matchedCount = state.s4SelectedClueIds.filter(id => validTrickClues.includes(id)).length;
+
+      if (state.s4Culprit === "magician" && matchedCount >= 1) {
+        state.endTime = Date.now();
+        sfx.fanfare();
+        state.currentStage = 5;
+        render();
+      } else {
+        loseHeart();
+        fb.className = "mt-4 p-4 rounded-2xl bg-rose-50 border-2 border-rose-500 text-rose-900 text-sm";
+        fb.innerHTML = `
+          <p class="font-bold mb-1">❌ 추리에 빈틈이 있습니다!</p>
+          <p>트릭을 설계한 인물과, 무대 뒤에서 실제로 물건을 숨기는 데 쓰인 <strong>마술 도구/알리바이 단서</strong>를 다시 골라보세요.</p>
+        `;
+        fb.classList.remove('hidden');
+      }
+    }
+
+    // --- STAGE 5: ENDING & DETECTIVE CERTIFICATE ---
+    function renderEnding(container) {
+      const elapsedSec = Math.max(1, Math.round((state.endTime - state.startTime) / 1000));
+      const min = Math.floor(elapsedSec / 60);
+      const sec = elapsedSec % 60;
+      const timeStr = min > 0 ? `${min}분 ${sec}초` : `${sec}초`;
+
+      const stars = state.hearts >= 4 ? "⭐⭐⭐ (특급 명탐정)"
+                  : state.hearts >= 2 ? "⭐⭐ (우수 탐정)"
+                  : "⭐ (성실한 견습 탐정)";
+
+      const today = new Date();
+      const dateStr = `${today.getFullYear()}년 ${today.getMonth() + 1}월 ${today.getDate()}일`;
+
+      container.innerHTML = `
+        <div class="stage-enter space-y-5">
+          <!-- Story Epilogue Card -->
+          <div class="bg-slate-900/90 border-2 border-amber-400/60 rounded-3xl p-5 sm:p-6 text-white shadow-xl">
+            <div class="flex items-center gap-2 text-amber-400 font-bold text-xs sm:text-sm mb-2">
+              <span>🎬 사건 해결 에필로그</span>
+            </div>
+            <h2 class="font-title text-2xl sm:text-3xl text-amber-300 mb-3">
+              "마술사의 트릭이 모두 풀렸습니다!"
+            </h2>
+            <p class="text-sm sm:text-base text-slate-200 leading-relaxed mb-3">
+              스무고개 탐정과 여러분의 날카로운 추리 앞에 마술사는 결국 모자를 벗어 인사했습니다.<br>
+              <em>"대단하군! 시선을 돌리는 마술의 비밀과 이중 상자 트릭까지 정확히 꿰뚫어 보다니, 역시 소문대로 훌륭한 탐정이야."</em>
+            </p>
+            <p class="text-xs sm:text-sm text-amber-200/90 bg-slate-800/80 p-3 rounded-xl border border-slate-700">
+              📚 <strong>책 속으로 한 걸음 더:</strong> 원작 소설 『스무고개 탐정과 마술사』에서는 마술사가 왜 이런 수수께끼를 냈는지, 그리고 탐정 사무소 친구들과 펼치는 더욱 흥미진진한 이야기가 펼쳐집니다. 책에서도 그 뒷이야기를 꼭 확인해 보세요!
+            </p>
+          </div>
+
+          <!-- Printable / Screenshot Detective Certificate -->
+          <div id="certificate-card" class="parchment rounded-3xl p-6 sm:p-8 border-8 border-double border-amber-600 relative shadow-2xl text-center">
+            <div class="inline-block bg-rose-700 text-amber-200 text-xs font-bold px-4 py-1 rounded-full mb-3">
+              OFFICIAL DETECTIVE CERTIFICATE
+            </div>
+            <h3 class="font-title text-3xl sm:text-4xl text-slate-900 tracking-wide mb-1">
+              스무고개 명탐정 인증서
+            </h3>
+            <p class="text-xs text-slate-500 mb-5">『스무고개 탐정과 마술사』 독서 추리 미션 완수</p>
+
+            <div class="bg-white/90 border-2 border-amber-300 rounded-2xl p-4 sm:p-5 mb-5 max-w-md mx-auto">
+              <p class="text-xs text-slate-500 font-bold mb-1">수여 대상</p>
+              <p class="font-title text-2xl sm:text-3xl text-rose-700 mb-3">
+                ${state.schoolClass ? state.schoolClass + ' ' : ''}${state.studentName} 탐정
+              </p>
+              <div class="grid grid-cols-3 gap-2 pt-3 border-t border-slate-200 text-xs">
+                <div>
+                  <span class="text-slate-400 block">추리 등급</span>
+                  <strong class="text-slate-800">${stars.split(' ')[0]}</strong>
+                </div>
+                <div>
+                  <span class="text-slate-400 block">수집 단서</span>
+                  <strong class="text-slate-800">${state.clues.length} / 6개</strong>
+                </div>
+                <div>
+                  <span class="text-slate-400 block">해결 시간</span>
+                  <strong class="text-slate-800">${timeStr}</strong>
+                </div>
+              </div>
+            </div>
+
+            <p class="text-sm text-slate-700 leading-relaxed max-w-lg mx-auto mb-5">
+              위 학생은 논리적인 스무고개 질문과 예리한 관찰력으로
+              마술사의 무대 트릭을 완벽히 해독하였기에
+              <strong>스무고개 탐정 사무소의 명예 탐정</strong>으로 인증합니다.
+            </p>
+
+            <div class="flex items-center justify-between max-w-md mx-auto pt-4 border-t border-amber-300 text-xs sm:text-sm text-slate-600 font-bold">
+              <span>${dateStr}</span>
+              <span class="flex items-center gap-1.5 text-slate-900">
+                스무고개 탐정 사무소장 <span class="inline-flex items-center justify-center w-8 h-8 rounded-full border-2 border-rose-600 text-rose-600 font-title text-xs rotate-12">인장</span>
+              </span>
+            </div>
+          </div>
+
+          <!-- Action Buttons -->
+          <div class="flex flex-col sm:flex-row gap-3">
+            <button onclick="copyResultSummary()"
+              class="btn-detective flex-1 bg-amber-500 hover:bg-amber-400 text-slate-950 font-title text-lg py-3.5 rounded-2xl">
+              📋 결과 문구 복사하기 (제출용)
+            </button>
+            <button onclick="resetGame()"
+              class="btn-detective flex-1 bg-slate-800 hover:bg-slate-700 text-white font-title text-lg py-3.5 rounded-2xl border border-slate-600">
+              🔄 처음부터 다시 도전하기
+            </button>
+          </div>
+          <p class="text-center text-xs text-slate-300">
+            💡 위 인증서 화면을 캡처(스크린샷)하거나 '결과 문구 복사하기'를 눌러 선생님께 제출할 수 있습니다!
+          </p>
+        </div>
+      `;
+    }
+
+    function copyResultSummary() {
+      const elapsedSec = Math.max(1, Math.round((state.endTime - state.startTime) / 1000));
+      const min = Math.floor(elapsedSec / 60);
+      const sec = elapsedSec % 60;
+      const timeStr = min > 0 ? `${min}분 ${sec}초` : `${sec}초`;
+      const summary = `[스무고개 탐정과 마술사 추리 미션 완료] 탐정: ${state.schoolClass ? state.schoolClass + ' ' : ''}${state.studentName} | 남은 추리력: ${state.hearts}/${state.maxHearts} | 수집 단서: ${state.clues.length}개 | 소요 시간: ${timeStr}`;
+
+      const tempInput = document.createElement('textarea');
+      tempInput.value = summary;
+      document.body.appendChild(tempInput);
+      tempInput.select();
+      try {
+        document.execCommand('copy');
+        sfx.correct();
+        showToast("✅ 인증 결과가 복사되었습니다! 학급 채팅방이나 과제란에 붙여넣기 하세요.");
+      } catch (err) {
+        showToast("⚠️ 복사에 실패했습니다. 인증서 화면을 캡처해 주세요!");
+      }
+      document.body.removeChild(tempInput);
+    }
+
+    function resetGame() {
+      sfx.click();
+      state.currentStage = 0;
+      state.hearts = 5;
+      state.clues = [];
+      state.s1Index = 0;
+      state.s2QuestionsAsked = [];
+      state.s2GuessMode = false;
+      state.s3Step = 0;
+      state.s4SelectedClueIds = [];
+      state.s4Culprit = null;
+      render();
+    }
+
+    // Initialize First Screen
+    window.addEventListener('DOMContentLoaded', () => {
+      render();
+    });
+  </script>
+</body>
+</html>
